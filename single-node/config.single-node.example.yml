@@ -1,0 +1,19 @@
+# Template for single-node certificate generation (same layout as CI / docs).
+# Copy next to wazuh-certs-tool.sh as config.yml:
+#   cp config.single-node.example.yml config.yml
+
+nodes:
+  # Wazuh indexer server nodes
+  indexer:
+    - name: wazuh.indexer
+      dns: "wazuh.indexer"
+
+  # Wazuh manager nodes (use node_type only with more than one manager)
+  manager:
+    - name: wazuh.manager
+      dns: "wazuh.manager"
+
+  # Wazuh dashboard node
+  dashboard:
+    - name: wazuh.dashboard
+      dns: "wazuh.dashboard"

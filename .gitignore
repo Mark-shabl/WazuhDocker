@@ -11,6 +11,7 @@ single-node/wazuh-certificates/*
 single-node/wazuh-certificates-tool.log
 single-node/wazuh-certs-tool*.sh
 single-node/config*.yml
+!single-node/config.single-node.example.yml
 single-node/config
 multi-node/wazuh-certificates
 multi-node/wazuh-certificates/*
