@@ -58,13 +58,16 @@ services:
       - node.max_local_storage_nodes=1
       - plugins.security.allow_default_init_securityindex=true
       - NODES_DN=CN=wazuh.indexer,OU=Wazuh,O=Wazuh,L=California,C=US
+      # Same creds as manager/dashboard; required so healthcheck can curl without embedding shell-metacharacters from .env.
+      - INDEXER_USERNAME=${INDEXER_USERNAME:-admin}
+      - INDEXER_PASSWORD=${INDEXER_PASSWORD:-admin}
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
     healthcheck:
-      # Password expanded by Compose from .env / shell (same defaults as INDEXER_* below).
-      test: [ "CMD-SHELL", "curl -fsSk -u \"${INDEXER_USERNAME:-admin}:${INDEXER_PASSWORD:-admin}\" https://127.0.0.1:9200/_cluster/health | grep -qE '\"status\"[[:space:]]*:[[:space:]]*\"(green|yellow|red)\"'" ]
+      # Use $$ so Compose emits ${VAR} for the container shell — passwords with & > etc. stay safe inside quoted expansion.
+      test: ["CMD-SHELL", "curl -fsSk -u \"$${INDEXER_USERNAME}:$${INDEXER_PASSWORD}\" https://127.0.0.1:9200/_cluster/health | grep -qE '\"status\"[[:space:]]*:[[:space:]]*\"(green|yellow|red)\"'"]
       interval: 30s
       timeout: 15s
       retries: 12
