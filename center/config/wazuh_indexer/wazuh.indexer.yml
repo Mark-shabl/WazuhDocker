@@ -4,6 +4,8 @@ cluster.name: "wazuh-cluster"
 path.data: /var/lib/wazuh-indexer
 path.logs: /var/log/wazuh-indexer
 discovery.type: single-node
+# без этого при ограниченном memlock на хосте indexer может не стартовать
+bootstrap.memory_lock: false
 compatibility.override_main_response_version: true
 plugins.security.ssl.http.pemcert_filepath: /usr/share/wazuh-indexer/config/certs/wazuh.indexer.pem
 plugins.security.ssl.http.pemkey_filepath: /usr/share/wazuh-indexer/config/certs/wazuh.indexer.key

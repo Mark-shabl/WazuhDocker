@@ -46,6 +46,15 @@ docker compose up -d
 - Dashboard: `https://<IP_хоста>` на порту из **`DASHBOARD_HTTPS_PORT`** в `.env` (по умолчанию **443**).
 - Вход в OpenSearch/Dashboard: `INDEXER_USERNAME` / `INDEXER_PASSWORD` (по умолчанию совпадает с демо Wazuh).
 
+## Ошибка `rlimit type 8` / `memlock` / `operation not permitted`
+
+Если при `docker compose up` контейнеры **indexer** или **manager** не стартуют с сообщением про **setting rlimit** и **type 8** (это **RLIMIT_MEMLOCK**):
+
+- типично для **rootless Docker**, **LXC/Proxmox**, VPS с урезанными capabilities;
+- в этом репозитории в `docker-compose` **убраны** неограниченные `memlock` ulimit, а в `config/wazuh_indexer/wazuh.indexer.yml` задано **`bootstrap.memory_lock: false`** (чуть мягче для продакшена, но стабильнее на таких хостах).
+
+После `git pull` перезапуск: `docker compose down` и снова `up -d`.
+
 ## Связка с `remote/`
 
 В `remote/.env` укажите тот же `WAZUH_STACK_VERSION`, что и `WAZUH_IMAGE_VERSION` в центре, и `WAZUH_MANAGER_SERVER`.
