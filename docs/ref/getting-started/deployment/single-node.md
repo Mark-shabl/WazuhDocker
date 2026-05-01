@@ -18,14 +18,38 @@ This deployment uses the `single-node/docker-compose.yml` file, which defines a 
     cd single-node
     ```
 
-3.  Download the certificate creation script and `config.yml` file:
+3.  Obtain the certificate creation script (`wazuh-certs-tool.sh`) and `config.yml`.
+
+    **Preferred (official packages):**
 
     ```bash
-    curl -o wazuh-certs-tool.sh https://packages.wazuh.com/5.0/wazuh-certs-tool-5.0.0-1.sh
-    curl -o config.yml https://packages.wazuh.com/5.0/config-5.0.0-1.yml
+    curl -fsSL -o wazuh-certs-tool.sh 'https://packages.wazuh.com/5.0/wazuh-certs-tool-5.0.0-1.sh'
+    curl -fsSL -o config.yml 'https://packages.wazuh.com/5.0/config-5.0.0-1.yml'
     ```
 
-4.  Edit the config.yml file with the configuration of the Wazuh components to be deployed
+    **If `packages.wazuh.com` returns HTTP 403** (common from some regions/hosting IPs), use either:
+
+    - **Copy the bundled template** from this repository:
+
+      ```bash
+      cp config.single-node.example.yml config.yml
+      ```
+
+    - **Build the official tool from GitHub** (no packages host):
+
+      ```bash
+      git clone --depth 1 -b v5.0.0-beta1 https://github.com/wazuh/wazuh-installation-assistant.git /tmp/wazuh-installation-assistant
+      cd /tmp/wazuh-installation-assistant
+      chmod +x builder.sh
+      ./builder.sh -c
+      cp wazuh-certs-tool.sh /path/to/wazuh-docker/single-node/wazuh-certs-tool.sh
+      ```
+
+      Adjust `/path/to/wazuh-docker/single-node` to your checkout.
+
+    Then ensure `config.yml` matches your stack (defaults below match `single-node/docker-compose.yml` hostnames).
+
+4.  Edit `config.yml` if your node DNS names differ from the defaults:
 
     ```yaml
     nodes:
