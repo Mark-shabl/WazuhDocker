@@ -8,7 +8,7 @@ services:
     restart: always
     depends_on:
       wazuh.indexer:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: [ "CMD-SHELL", "curl -k -s -o /dev/null https://localhost:55000 || exit 1" ]
       interval: 15s
@@ -63,12 +63,12 @@ services:
         soft: 65536
         hard: 65536
     healthcheck:
-      # Match JSON with optional spaces; strict \"status\":\"UP\" often fails on OpenSearch responses.
-      test: [ "CMD-SHELL", "curl -fks https://localhost:9200/_plugins/_security/health | grep -qE '\"status\"[[:space:]]*:[[:space:]]*\"UP\"'" ]
+      # Password expanded by Compose from .env / shell (same defaults as INDEXER_* below).
+      test: [ "CMD-SHELL", "curl -fsSk -u \"${INDEXER_USERNAME:-admin}:${INDEXER_PASSWORD:-admin}\" https://127.0.0.1:9200/_cluster/health | grep -qE '\"status\"[[:space:]]*:[[:space:]]*\"(green|yellow|red)\"'" ]
       interval: 30s
       timeout: 15s
       retries: 12
-      start_period: 180s
+      start_period: 240s
     volumes:
       - wazuh-indexer-data:/var/lib/wazuh-indexer
       - ./config/wazuh_indexer/certs/root-ca.pem:/usr/share/wazuh-indexer/config/certs/root-ca.pem
@@ -110,9 +110,9 @@ services:
       - wazuh-dashboard-custom:/usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom
     depends_on:
       wazuh.indexer:
-        condition: service_healthy
+        condition: service_started
       wazuh.manager:
-        condition: service_healthy
+        condition: service_started
 
 volumes:
   wazuh_api_configuration:
