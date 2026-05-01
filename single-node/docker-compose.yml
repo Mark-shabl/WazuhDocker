@@ -14,10 +14,8 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+    # Avoid memlock RLIMIT -1 here: Docker-in-Proxmox LXC often returns EPERM on RLIMIT_MEMLOCK (rlimit type 8).
     ulimits:
-      memlock:
-        soft: -1
-        hard: -1
       nofile:
         soft: 655360
         hard: 655360
@@ -52,7 +50,8 @@ services:
       - "${WAZUH_INDEXER_PORT:-9200}:9200"
     environment:
       - OPENSEARCH_JAVA_OPTS=-Xms${INDEXER_JAVA_HEAP:-1g} -Xmx${INDEXER_JAVA_HEAP:-1g}
-      - bootstrap.memory_lock=true
+      # Heap mlock requires permissive memlock ulimits; disabled for restricted hosts (e.g. LXC).
+      - bootstrap.memory_lock=false
       - network.host=0.0.0.0
       - node.name=wazuh.indexer
       - cluster.initial_cluster_manager_nodes=wazuh.indexer
@@ -60,9 +59,6 @@ services:
       - plugins.security.allow_default_init_securityindex=true
       - NODES_DN=CN=wazuh.indexer,OU=Wazuh,O=Wazuh,L=California,C=US
     ulimits:
-      memlock:
-        soft: -1
-        hard: -1
       nofile:
         soft: 65536
         hard: 65536

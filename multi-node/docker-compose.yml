@@ -15,9 +15,6 @@ services:
       timeout: 5s
       retries: 5
     ulimits:
-      memlock:
-        soft: -1
-        hard: -1
       nofile:
         soft: 655360
         hard: 655360
@@ -55,9 +52,6 @@ services:
       retries: 10
       start_period: 30s
     ulimits:
-      memlock:
-        soft: -1
-        hard: -1
       nofile:
         soft: 655360
         hard: 655360
@@ -91,7 +85,7 @@ services:
       - "${WAZUH_INDEXER_API_PORT:-9200}:9200"
     environment:
       - OPENSEARCH_JAVA_OPTS=-Xms${INDEXER_JAVA_HEAP:-1g} -Xmx${INDEXER_JAVA_HEAP:-1g}
-      - bootstrap.memory_lock=true
+      - bootstrap.memory_lock=false
       - network.host=0.0.0.0
       - node.name=wazuh1.indexer
       - cluster.initial_cluster_manager_nodes=wazuh1.indexer,wazuh2.indexer,wazuh3.indexer
@@ -100,9 +94,6 @@ services:
       - plugins.security.allow_default_init_securityindex=true
       - NODES_DN=CN=wazuh1.indexer,OU=Wazuh,O=Wazuh,L=California,C=US;CN=wazuh2.indexer,OU=Wazuh,O=Wazuh,L=California,C=US;CN=wazuh3.indexer,OU=Wazuh,O=Wazuh,L=California,C=US
     ulimits:
-      memlock:
-        soft: -1
-        hard: -1
       nofile:
         soft: 65536
         hard: 65536
@@ -131,7 +122,7 @@ services:
       - wazuh1.indexer
     environment:
       - OPENSEARCH_JAVA_OPTS=-Xms${INDEXER_JAVA_HEAP:-1g} -Xmx${INDEXER_JAVA_HEAP:-1g}
-      - bootstrap.memory_lock=true
+      - bootstrap.memory_lock=false
       - network.host=0.0.0.0
       - node.name=wazuh2.indexer
       - cluster.initial_cluster_manager_nodes=wazuh1.indexer,wazuh2.indexer,wazuh3.indexer
@@ -140,9 +131,6 @@ services:
       - plugins.security.allow_default_init_securityindex=true
       - NODES_DN=CN=wazuh1.indexer,OU=Wazuh,O=Wazuh,L=California,C=US;CN=wazuh2.indexer,OU=Wazuh,O=Wazuh,L=California,C=US;CN=wazuh3.indexer,OU=Wazuh,O=Wazuh,L=California,C=US
     ulimits:
-      memlock:
-        soft: -1
-        hard: -1
       nofile:
         soft: 65536
         hard: 65536
@@ -169,7 +157,7 @@ services:
       - wazuh1.indexer
     environment:
       - OPENSEARCH_JAVA_OPTS=-Xms${INDEXER_JAVA_HEAP:-1g} -Xmx${INDEXER_JAVA_HEAP:-1g}
-      - bootstrap.memory_lock=true
+      - bootstrap.memory_lock=false
       - network.host=0.0.0.0
       - node.name=wazuh3.indexer
       - cluster.initial_cluster_manager_nodes=wazuh1.indexer,wazuh2.indexer,wazuh3.indexer
@@ -178,9 +166,6 @@ services:
       - plugins.security.allow_default_init_securityindex=true
       - NODES_DN=CN=wazuh1.indexer,OU=Wazuh,O=Wazuh,L=California,C=US;CN=wazuh2.indexer,OU=Wazuh,O=Wazuh,L=California,C=US;CN=wazuh3.indexer,OU=Wazuh,O=Wazuh,L=California,C=US
     ulimits:
-      memlock:
-        soft: -1
-        hard: -1
       nofile:
         soft: 65536
         hard: 65536
