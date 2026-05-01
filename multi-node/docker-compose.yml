@@ -98,11 +98,11 @@ services:
         soft: 65536
         hard: 65536
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fks https://localhost:9200/_plugins/_security/health | grep -q '\"status\":\"UP\"'" ]
+      test: [ "CMD-SHELL", "curl -fks https://localhost:9200/_plugins/_security/health | grep -qE '\"status\"[[:space:]]*:[[:space:]]*\"UP\"'" ]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      timeout: 15s
+      retries: 12
+      start_period: 180s
     volumes:
       - wazuh-indexer-data-1:/var/lib/wazuh-indexer
       - ./config/wazuh1_indexer/certs/root-ca.pem:/usr/share/wazuh-indexer/config/certs/root-ca.pem
@@ -135,11 +135,11 @@ services:
         soft: 65536
         hard: 65536
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fks https://localhost:9200/_plugins/_security/health | grep -q '\"status\":\"UP\"'" ]
+      test: [ "CMD-SHELL", "curl -fks https://localhost:9200/_plugins/_security/health | grep -qE '\"status\"[[:space:]]*:[[:space:]]*\"UP\"'" ]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      timeout: 15s
+      retries: 12
+      start_period: 180s
     volumes:
       - wazuh-indexer-data-2:/var/lib/wazuh-indexer
       - ./config/wazuh2_indexer/certs/root-ca.pem:/usr/share/wazuh-indexer/config/certs/root-ca.pem
@@ -170,11 +170,11 @@ services:
         soft: 65536
         hard: 65536
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fks https://localhost:9200/_plugins/_security/health | grep -q '\"status\":\"UP\"'" ]
+      test: [ "CMD-SHELL", "curl -fks https://localhost:9200/_plugins/_security/health | grep -qE '\"status\"[[:space:]]*:[[:space:]]*\"UP\"'" ]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      timeout: 15s
+      retries: 12
+      start_period: 180s
     volumes:
       - wazuh-indexer-data-3:/var/lib/wazuh-indexer
       - ./config/wazuh3_indexer/certs/root-ca.pem:/usr/share/wazuh-indexer/config/certs/root-ca.pem

@@ -63,11 +63,12 @@ services:
         soft: 65536
         hard: 65536
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fks https://localhost:9200/_plugins/_security/health | grep -q '\"status\":\"UP\"'" ]
+      # Match JSON with optional spaces; strict \"status\":\"UP\" often fails on OpenSearch responses.
+      test: [ "CMD-SHELL", "curl -fks https://localhost:9200/_plugins/_security/health | grep -qE '\"status\"[[:space:]]*:[[:space:]]*\"UP\"'" ]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      timeout: 15s
+      retries: 12
+      start_period: 180s
     volumes:
       - wazuh-indexer-data:/var/lib/wazuh-indexer
       - ./config/wazuh_indexer/certs/root-ca.pem:/usr/share/wazuh-indexer/config/certs/root-ca.pem
