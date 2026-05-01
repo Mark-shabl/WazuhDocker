@@ -1,4 +1,9 @@
 *.log
+
+# Local overrides (templates: .env.example per stack)
+single-node/.env
+wazuh-agent/.env
+multi-node/.env
 build-docker-images/artifact_urls.yaml
 build-docker-images/artifacts_env.txt
 single-node/wazuh-certificates

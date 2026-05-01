@@ -1,7 +1,8 @@
 # Wazuh App Copyright (C) 2017, Wazuh Inc. (License GPLv2)
+# Copy .env.example to .env and set WAZUH_MANAGER_SERVER (docker compose loads .env automatically).
 services:
   wazuh.agent:
-    image: wazuh/wazuh-agent:5.0.0
+    image: wazuh/wazuh-agent:${WAZUH_STACK_VERSION:-5.0.0}
     restart: always
     environment:
-      - WAZUH_MANAGER_SERVER=<WAZUH_MANAGER_IP>
+      - WAZUH_MANAGER_SERVER=${WAZUH_MANAGER_SERVER:?Set WAZUH_MANAGER_SERVER in .env - see .env.example}

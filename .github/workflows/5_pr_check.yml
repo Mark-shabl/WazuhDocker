@@ -169,8 +169,12 @@ jobs:
 
     - name: Start single node stack
       id: start_single_node_stack
-      run: docker compose up -d
+      run: |
+        echo "WAZUH_STACK_VERSION=${WAZUH_IMAGE_VERSION}" > .env
+        docker compose up -d
       working-directory: ./single-node
+      env:
+        WAZUH_IMAGE_VERSION: ${{ env.WAZUH_IMAGE_VERSION }}
 
     - name: Check Wazuh indexer start
       if: ${{ always() && steps.start_single_node_stack.outcome == 'success' }}
@@ -270,9 +274,16 @@ jobs:
         echo "Error: Dashboard did not reach 200 status in time."
         exit 1
 
-    - name: Modify Docker endpoint into Wazuh agent docker-compose.yml file
+    - name: Write wazuh-agent .env for CI
       if: ${{ always() && steps.start_single_node_stack.outcome == 'success' }}
-      run: sed -i "s/<WAZUH_MANAGER_IP>/$(ip addr show docker0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)/g" wazuh-agent/docker-compose.yml
+      shell: bash
+      env:
+        WAZUH_IMAGE_VERSION: ${{ env.WAZUH_IMAGE_VERSION }}
+      run: |
+        DOCKER_BRIDGE_IP=$(ip addr show docker0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+        printf 'WAZUH_STACK_VERSION=%s\nWAZUH_MANAGER_SERVER=%s\n' "$WAZUH_IMAGE_VERSION" "$DOCKER_BRIDGE_IP" > wazuh-agent/.env
+
+      working-directory: .
 
     - name: Edit Wazuh agent docker-compose file
       if: ${{ always() && steps.start_single_node_stack.outcome == 'success' }}
@@ -448,8 +459,12 @@ jobs:
 
     - name: Start multi node stack
       id: start_multi_node_stack
-      run: docker compose up -d
+      run: |
+        echo "WAZUH_STACK_VERSION=${WAZUH_IMAGE_VERSION}" > .env
+        docker compose up -d
       working-directory: ./multi-node
+      env:
+        WAZUH_IMAGE_VERSION: ${{ env.WAZUH_IMAGE_VERSION }}
 
     - name: Check Wazuh indexer start
       if: ${{ always() && steps.start_multi_node_stack.outcome == 'success' }}
@@ -559,9 +574,16 @@ jobs:
         echo "Error: Dashboard did not reach 200 status in time."
         exit 1
 
-    - name: Modify Docker endpoint into Wazuh agent docker-compose.yml file
+    - name: Write wazuh-agent .env for CI
       if: ${{ always() && steps.start_multi_node_stack.outcome == 'success' }}
-      run: sed -i "s/<WAZUH_MANAGER_IP>/$(ip addr show docker0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)/g" wazuh-agent/docker-compose.yml
+      shell: bash
+      env:
+        WAZUH_IMAGE_VERSION: ${{ env.WAZUH_IMAGE_VERSION }}
+      run: |
+        DOCKER_BRIDGE_IP=$(ip addr show docker0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+        printf 'WAZUH_STACK_VERSION=%s\nWAZUH_MANAGER_SERVER=%s\n' "$WAZUH_IMAGE_VERSION" "$DOCKER_BRIDGE_IP" > wazuh-agent/.env
+
+      working-directory: .
 
     - name: Edit Wazuh agent docker-compose file
       if: ${{ always() && steps.start_multi_node_stack.outcome == 'success' }}
