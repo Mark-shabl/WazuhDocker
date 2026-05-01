@@ -48,12 +48,19 @@ docker compose up -d
 
 ## Ошибка `rlimit type 8` / `memlock` / `operation not permitted`
 
-Если при `docker compose up` контейнеры **indexer** или **manager** не стартуют с сообщением про **setting rlimit** и **type 8** (это **RLIMIT_MEMLOCK**):
+Если при `docker compose up` контейнеры **indexer** или **manager** не стартуют с сообщением про **setting rlimit**:
 
-- типично для **rootless Docker**, **LXC/Proxmox**, VPS с урезанными capabilities;
-- в этом репозитории в `docker-compose` **убраны** неограниченные `memlock` ulimit, а в `config/wazuh_indexer/wazuh.indexer.yml` задано **`bootstrap.memory_lock: false`** (чуть мягче для продакшена, но стабильнее на таких хостах).
+- **type 8** — **RLIMIT_MEMLOCK**;
+- **type 7** — **RLIMIT_NOFILE** (слишком большой `nofile` в compose недоступен хосту).
+
+Типично для **rootless Docker**, **LXC/Proxmox**, VPS с урезанными capabilities. В этом репозитории:
+
+- в `docker-compose` **нет** кастомных `ulimits` (используются лимиты по умолчанию для контейнера);
+- в `config/wazuh_indexer/wazuh.indexer.yml` задано **`bootstrap.memory_lock: false`**.
 
 После `git pull` перезапуск: `docker compose down` и снова `up -d`.
+
+На полноценном Docker с правами root при большой нагрузке при необходимости можно снова поднять лимиты вручную в `docker-compose.yml` под свой хост.
 
 ## Связка с `remote/`
 
