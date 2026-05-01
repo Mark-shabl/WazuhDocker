@@ -1,0 +1,14 @@
+# Wazuh App Copyright (C) 2017, Wazuh Inc. (License GPLv2)
+services:
+  wazuh.agent:
+    image: wazuh/wazuh-agent:${WAZUH_STACK_VERSION:-4.14.4}
+    container_name: wazuh-remote-agent
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - WAZUH_MANAGER_SERVER=${WAZUH_MANAGER_SERVER}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./config/wazuh-agent-conf:/wazuh-config-mount/etc/ossec.conf
