@@ -16,8 +16,8 @@ services:
       retries: 5
     ulimits:
       nofile:
-        soft: 655360
-        hard: 655360
+        soft: ${WAZUH_MANAGER_NOFILE_SOFT:-65536}
+        hard: ${WAZUH_MANAGER_NOFILE_HARD:-65536}
     ports:
       - "${WAZUH_REGISTRATION_PORT:-1515}:1515"
       - "${WAZUH_SYSLOG_UDP_PORT:-514}:514/udp"
@@ -53,8 +53,8 @@ services:
       start_period: 30s
     ulimits:
       nofile:
-        soft: 655360
-        hard: 655360
+        soft: ${WAZUH_MANAGER_NOFILE_SOFT:-65536}
+        hard: ${WAZUH_MANAGER_NOFILE_HARD:-65536}
     depends_on:
       wazuh.master:
         condition: service_healthy

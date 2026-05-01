@@ -14,11 +14,11 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-    # Avoid memlock RLIMIT -1 here: Docker-in-Proxmox LXC often returns EPERM on RLIMIT_MEMLOCK (rlimit type 8).
+    # High nofile (e.g. 655360) is rejected on Docker-in-LXC; override on bare metal if needed.
     ulimits:
       nofile:
-        soft: 655360
-        hard: 655360
+        soft: ${WAZUH_MANAGER_NOFILE_SOFT:-65536}
+        hard: ${WAZUH_MANAGER_NOFILE_HARD:-65536}
     ports:
       - "${WAZUH_AGENT_PORT:-1514}:1514"
       - "${WAZUH_REGISTRATION_PORT:-1515}:1515"
