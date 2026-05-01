@@ -99,7 +99,9 @@ services:
       - OPENSEARCH_HOSTS=https://wazuh.indexer:9200
       - INDEXER_USERNAME=${INDEXER_USERNAME:-admin}
       - INDEXER_PASSWORD=${INDEXER_PASSWORD:-admin}
-      - WAZUH_API_URL=https://wazuh.manager
+      # Browser reaches API at WAZUH_API_URL:API_PORT — use public host/IP when not opening UI from Docker LAN.
+      - WAZUH_API_URL=${WAZUH_API_URL:-https://wazuh.manager}
+      - API_PORT=${WAZUH_API_PORT:-55000}
       - DASHBOARD_USERNAME=${DASHBOARD_USERNAME:-kibanaserver}
       - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:-kibanaserver}
       - SERVER_SSL_CERTIFICATE=/usr/share/wazuh-dashboard/config/certs/dashboard.pem
@@ -111,9 +113,10 @@ services:
       - ./config/wazuh_dashboard/certs/root-ca.pem:/usr/share/wazuh-dashboard/config/certs/root-ca.pem
       - wazuh-dashboard-config:/usr/share/wazuh-dashboard/config
       - wazuh-dashboard-custom:/usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom
+    # Wait until indexer passes healthcheck so migrations do not race against ECONNREFUSED / partial .kibana_1.
     depends_on:
       wazuh.indexer:
-        condition: service_started
+        condition: service_healthy
       wazuh.manager:
         condition: service_started
 
