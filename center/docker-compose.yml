@@ -85,8 +85,7 @@ services:
       - ./config/wazuh_indexer_ssl_certs/wazuh.dashboard-key.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem
       - ./config/wazuh_indexer_ssl_certs/root-ca.pem:/usr/share/wazuh-dashboard/certs/root-ca.pem
       - ./config/wazuh_dashboard/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
-      # Сначала том, затем файл: иначе том «перекрывает» каталог и хостовый wazuh.yml из репозитория не попадает в контейнер (типично: 3002 unreachable / 401 из‑за старого пароля в томе).
-      - wazuh-dashboard-config:/usr/share/wazuh-dashboard/data/wazuh/config
+      # Только привязка wazuh.yml с хоста (без named volume): том на весь каталог легко «залипает» со старым паролем API → 401 → лавина запросов → 429 на /api/login.
       - ./config/wazuh_dashboard/wazuh.yml:/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml
       - wazuh-dashboard-custom:/usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom
     depends_on:
@@ -109,5 +108,4 @@ volumes:
   filebeat_etc:
   filebeat_var:
   wazuh-indexer-data:
-  wazuh-dashboard-config:
   wazuh-dashboard-custom:

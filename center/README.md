@@ -86,13 +86,23 @@ docker compose up -d
 
 На полноценном Docker с правами root при большой нагрузке при необходимости можно снова поднять лимиты вручную в `docker-compose.yml` под свой хост.
 
-## Ошибка 3002 «https://wazuh.manager:55000 is unreachable», `/api/request` 401 или 429
+## Ошибка 3002, `/api/request` 401, затем `/api/login` или `/api/check-stored-api` 429
 
-Сообщение в консоли браузера про **CSP** (`script-src`, `unsafe-inline`) для фрагмента bootstrap — ожидаемое предупреждение, к этой проблеме обычно не относится.
+Сообщение в консоли про **CSP** (`script-src`, `unsafe-inline`) у bootstrap — ожидаемое, на работу приложения обычно не влияет.
 
-**Частая причина в Docker:** том `wazuh-dashboard-config` смонтирован на каталог `.../data/wazuh/config` **после** привязки файла `wazuh.yml` с хоста, из‑за чего в контейнер попадает **старая** копия `wazuh.yml` из тома (другой пароль API или дефолты). В этом репозитории порядок монтирования исправлен: сначала том, затем файл.
+### Что происходит по цепочке
 
-После `git pull`:
+1. Плагин Wazuh не может нормально ходить в API (неверный пароль в `wazuh.yml`, сеть до `wazuh.manager`, либо **401 от прокси** на фронтовые `POST /api/...`).
+2. Интерфейс и плагин начинают **многократно** повторять запросы.
+3. В ответ приходит **429**: это может быть **лимит на стороне прокси/хостинга** (Nginx `limit_req`, Cloudflare и т.п.) или временная **блокировка попыток входа** со стороны OpenSearch Security при серии неудачных обращений.
+
+Смысл лечения: **сначала убрать первопричину 401**, затем **закрыть вкладку на 5–15 минут** (снять 429) и открыть снова.
+
+### Конфиг Docker в этом репозитории
+
+Том **`wazuh-dashboard-config` больше не используется**: в контейнер пробрасывается только файл `./config/wazuh_dashboard/wazuh.yml` с хоста, чтобы не застревали старые пароли API.
+
+После `git pull` на сервере:
 
 ```bash
 cd center/
@@ -100,27 +110,71 @@ python3 scripts/render_secrets.py
 docker compose up -d --force-recreate wazuh.dashboard
 ```
 
-Если симптом сохраняется, можно сбросить только том настроек плагина (вы потеряете сохранённые в UI правки `wazuh/config`):
+Проверьте, что внутри контейнера именно ваш пароль API (без лишнего `\r` в конце строк в `.env`):
 
 ```bash
-docker compose stop wazuh.dashboard
-docker volume ls | findstr wazuh-dashboard-config
-# удалите том с этим именем, например:
-# docker volume rm ИМЯ_ПРОЕКТА_wazuh-dashboard-config
-docker compose up -d
+docker exec center-wazuh.dashboard cat /usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml
 ```
 
-**Проверка связи Dashboard → Manager API** (на сервере, подставьте имя контейнера из `docker ps`):
+**Связь Dashboard → Manager API** (подставьте учётные данные из `.env`):
 
 ```bash
 docker exec center-wazuh.dashboard curl -sk -u "ВАШ_API_USER:ВАШ_API_PASSWORD" "https://wazuh.manager:55000/?pretty"
 ```
 
-Ожидается JSON с `error: 0`. Если здесь ошибка — сначала устраняйте manager/API (логи `center-wazuh.manager`), а не фронт.
+Нужен JSON с `"error": 0`. Если здесь ошибка — чините manager/API и сертификаты, а не браузер.
 
-**Обратный прокси (Nginx / Caddy и т.д.)** на `https://test2.mark-sandbox.ru`: если перед Dashboard включена **дополнительная HTTP Basic‑авторизация**, запросы к `POST /api/request` часто получают **401** — отключите базовую авторизацию для этого виртуального хоста или настройте исключения (или используйте только встроенную аутентификацию OpenSearch/ Wazuh).
+### Обратный прокси (ваш случай `test2.mark-sandbox.ru`)
 
-**429 Too Many Requests:** часто следствие лавины повторов при недоступном API; после починки связи обновите страницу с паузой.
+- **Не включайте второй слой HTTP Basic Auth** поверх Dashboard: браузер часто шлёт **401** на `POST /api/request` без того же `Authorization`, что вы видите как «всё сломалось» и цепочку до 429.
+- Если стоит **Nginx**, не душите `location /` агрессивным **`limit_req`** без большого `burst` для длинных сессий Dashboard.
+- Если перед сайтом **Cloudflare / WAF**, посмотрите в Network у ответа **429**: часто в теле или заголовках видно, кто режет (CF Ray, `server: cloudflare` и т.д.).
+
+## Работает по IP:порту, по домену — 401 / 3002 / 429
+
+Если **прямой заход на `https://<сервер>:443` (или ваш порт)** в порядке, а **через домен** (`https://test2.mark-sandbox.ru`) ломается, проблема почти всегда **между браузером и контейнером**: обратный прокси, TLS, заголовки, отдельная Basic Auth только на домене, Cloudflare.
+
+### 1. Публичный URL в конфиге Dashboard
+
+В **`center/.env`** задайте тот же адрес, что вводите в браузере (схема `https`, без слэша в конце), затем:
+
+```bash
+python3 scripts/render_secrets.py
+docker compose up -d --force-recreate wazuh.dashboard
+```
+
+В `opensearch_dashboards.yml` появится строка `server.publicBaseUrl: "https://ваш.домен"` — так OpenSearch Security корректно строит куки и редиректы за прокси.
+
+### 2. Nginx (типовой минимум)
+
+Убедитесь, что прокси не режет запросы и передаёт схему (иначе куки и сессии ведут себя странно):
+
+```nginx
+location / {
+    proxy_pass https://127.0.0.1:5601;   # или порт из DASHBOARD_HTTPS_PORT на хосте
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 300s;
+}
+```
+
+Не навешивайте **дополнительную HTTP Basic Auth** на этот же `server`, если не уверены, что она пробрасывается на все `POST /api/...` (частый источник 401 только с домена).
+
+### 3. Cloudflare и аналоги
+
+Проверьте режим SSL (**Full (strict)** к вашему origin), отключите по возможности жёсткий rate limit / Bot Fight для поддомена, посмотрите ответ **429** — часто видно, что лимит выставлен на стороне CDN, а не Dashboard.
+
+### Старый том на сервере (устарело, но можно подчистить)
+
+Если раньше поднимали стек с томом `wazuh-dashboard-config`, он мог остаться в Docker как неиспользуемый:
+
+```bash
+docker volume ls | grep wazuh-dashboard-config
+# при желании: docker volume rm <имя>
+```
 
 ## Связка с `remote/`
 
