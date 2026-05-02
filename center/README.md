@@ -44,7 +44,31 @@ docker compose up -d
 ```
 
 - Dashboard: `https://<IP_хоста>` на порту из **`DASHBOARD_HTTPS_PORT`** в `.env` (по умолчанию **443**).
-- Вход в OpenSearch/Dashboard: `INDEXER_USERNAME` / `INDEXER_PASSWORD` (по умолчанию совпадает с демо Wazuh).
+
+### Вход в веб-интерфейс (страница логина Dashboard)
+
+В OpenSearch Security заведены пользователи из `internal_users.yml` (хеши собираются из `.env` скриптом `render_secrets.py`).
+
+Попробуйте по очереди:
+
+| Логин | Пароль из `.env` |
+|--------|-------------------|
+| **`INDEXER_USERNAME`** (часто `admin`) | **`INDEXER_PASSWORD`** |
+| **`DASHBOARD_USERNAME`** (в шаблоне `kibanaserver`) | **`DASHBOARD_PASSWORD`** |
+
+Учётка **`API_USERNAME` / `API_PASSWORD`** — это **Wazuh API** (и плагин в `wazuh.yml`), **не** то же самое, что поле логина на странице Dashboard, если вводите не те значения.
+
+Если пароль «не подходит» после правок `.env`:
+
+1. Сохраните `.env` в формате **Unix (LF)**: `sed -i 's/\r$//' .env` или `dos2unix .env` — иначе в контейнер иногда попадает лишний `\r`.
+2. В каталоге `center/`: `python3 scripts/render_secrets.py` (обновит `internal_users.yml` и `wazuh.yml`).
+3. Перезапуск, чтобы indexer подхватил `internal_users.yml`:  
+   `docker compose up -d --force-recreate wazuh.indexer wazuh.dashboard`  
+   (или `docker compose down && docker compose up -d`).
+4. В пароле для Docker Compose каждый символ **`$`** в `.env` нужно писать как **`$$`**, иначе Compose съест часть строки.
+
+Проверка, что indexer принимает `admin`:  
+`curl -sk -u "admin:ВАШ_INDEXER_PASSWORD" https://127.0.0.1:9200/_cluster/health?pretty` (на сервере, если 9200 проброшен).
 
 ## Ошибка `rlimit type 8` / `memlock` / `operation not permitted`
 

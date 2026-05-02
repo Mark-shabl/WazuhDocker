@@ -18,7 +18,8 @@ def load_env(path: Path) -> dict[str, str]:
         print(f"Нет файла {path}. Скопируйте .env.example в .env и заполните.", file=sys.stderr)
         sys.exit(1)
     env: dict[str, str] = {}
-    for raw in path.read_text(encoding="utf-8").splitlines():
+    text = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
+    for raw in text.splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
