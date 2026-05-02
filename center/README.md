@@ -86,6 +86,42 @@ docker compose up -d
 
 На полноценном Docker с правами root при большой нагрузке при необходимости можно снова поднять лимиты вручную в `docker-compose.yml` под свой хост.
 
+## Ошибка 3002 «https://wazuh.manager:55000 is unreachable», `/api/request` 401 или 429
+
+Сообщение в консоли браузера про **CSP** (`script-src`, `unsafe-inline`) для фрагмента bootstrap — ожидаемое предупреждение, к этой проблеме обычно не относится.
+
+**Частая причина в Docker:** том `wazuh-dashboard-config` смонтирован на каталог `.../data/wazuh/config` **после** привязки файла `wazuh.yml` с хоста, из‑за чего в контейнер попадает **старая** копия `wazuh.yml` из тома (другой пароль API или дефолты). В этом репозитории порядок монтирования исправлен: сначала том, затем файл.
+
+После `git pull`:
+
+```bash
+cd center/
+python3 scripts/render_secrets.py
+docker compose up -d --force-recreate wazuh.dashboard
+```
+
+Если симптом сохраняется, можно сбросить только том настроек плагина (вы потеряете сохранённые в UI правки `wazuh/config`):
+
+```bash
+docker compose stop wazuh.dashboard
+docker volume ls | findstr wazuh-dashboard-config
+# удалите том с этим именем, например:
+# docker volume rm ИМЯ_ПРОЕКТА_wazuh-dashboard-config
+docker compose up -d
+```
+
+**Проверка связи Dashboard → Manager API** (на сервере, подставьте имя контейнера из `docker ps`):
+
+```bash
+docker exec center-wazuh.dashboard curl -sk -u "ВАШ_API_USER:ВАШ_API_PASSWORD" "https://wazuh.manager:55000/?pretty"
+```
+
+Ожидается JSON с `error: 0`. Если здесь ошибка — сначала устраняйте manager/API (логи `center-wazuh.manager`), а не фронт.
+
+**Обратный прокси (Nginx / Caddy и т.д.)** на `https://test2.mark-sandbox.ru`: если перед Dashboard включена **дополнительная HTTP Basic‑авторизация**, запросы к `POST /api/request` часто получают **401** — отключите базовую авторизацию для этого виртуального хоста или настройте исключения (или используйте только встроенную аутентификацию OpenSearch/ Wazuh).
+
+**429 Too Many Requests:** часто следствие лавины повторов при недоступном API; после починки связи обновите страницу с паузой.
+
 ## Связка с `remote/`
 
 В `remote/.env` укажите тот же `WAZUH_STACK_VERSION`, что и `WAZUH_IMAGE_VERSION` в центре, и `WAZUH_MANAGER_SERVER`.

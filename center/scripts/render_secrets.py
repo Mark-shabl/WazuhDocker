@@ -65,14 +65,23 @@ def yaml_double_quoted(s: str) -> str:
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def write_wazuh_yml(path: Path, api_url: str, api_user: str, api_password: str) -> None:
+def write_wazuh_yml(
+    path: Path,
+    api_url: str,
+    api_user: str,
+    api_password: str,
+    api_ca: str,
+    run_as: bool,
+) -> None:
+    run_as_literal = "true" if run_as else "false"
+    ca_line = f"      ca: {yaml_double_quoted(api_ca)}\n" if api_ca else ""
     body = f"""hosts:
   - 1513629884013:
       url: {yaml_double_quoted(api_url)}
       port: 55000
       username: {yaml_double_quoted(api_user)}
       password: {yaml_double_quoted(api_password)}
-      run_as: true
+{ca_line}      run_as: {run_as_literal}
 """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body, encoding="utf-8")
@@ -146,8 +155,21 @@ def main() -> None:
     if not api_user or not api_pass:
         print("Задайте API_USERNAME и API_PASSWORD в .env.", file=sys.stderr)
         sys.exit(1)
+    # Путь CA внутри контейнера dashboard (опционально). Пустое значение = как в upstream, без поля ca в wazuh.yml.
+    if "WAZUH_API_CA_PATH" in env:
+        api_ca = env["WAZUH_API_CA_PATH"].strip()
+    else:
+        api_ca = ""
+    run_as = env.get("WAZUH_API_RUN_AS", "true").strip().lower() in ("1", "true", "yes")
 
-    write_wazuh_yml(ROOT / "config/wazuh_dashboard/wazuh.yml", api_url, api_user, api_pass)
+    write_wazuh_yml(
+        ROOT / "config/wazuh_dashboard/wazuh.yml",
+        api_url,
+        api_user,
+        api_pass,
+        api_ca,
+        run_as,
+    )
     print("OK: internal_users.yml, wazuh_manager.conf, wazuh.yml обновлены из .env")
 
 
