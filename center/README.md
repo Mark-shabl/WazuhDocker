@@ -145,14 +145,22 @@ docker compose up -d --force-recreate wazuh.dashboard
 
 В `opensearch_dashboards.yml` появится строка `server.publicBaseUrl: "https://ваш.домен"` — так OpenSearch Security корректно строит куки и редиректы за прокси.
 
+**Важно:** в `.env` это должен быть **тот же хост, что в адресной строке**. Если задать `https://домен`, а открывать `https://192.168.x.x`, плагин Wazuh часто ловит в браузере **AxiosError: Network Error** (XHR/сессии не совпадают с `publicBaseUrl`). Варианты: ходить только с домена; для доступа только по IP задайте `DASHBOARD_PUBLIC_BASE_URL=https://192.168.x.x` или **очистите** переменную, снова `render_secrets` и пересоздайте контейнер.
+
 ### 2. Nginx (типовой минимум)
 
-Убедитесь, что прокси не режет запросы и передаёт схему (иначе куки и сессии ведут себя странно):
+**502 Bad Gateway** чаще всего значит: Nginx проксирует на порт, где **ничего не слушает**. В `docker-compose.yml` проброс идёт как **`DASHBOARD_HTTPS_PORT` (хост) → 5601 (контейнер)**. По умолчанию `DASHBOARD_HTTPS_PORT=443`, то есть Dashboard на **хосте** слушает **443**. Тогда пример `proxy_pass https://127.0.0.1:5601` **неверен**, если вы не меняли порт в `.env`.
+
+Рекомендуемая схема **Nginx на 443 + Docker**: в `center/.env` задайте, например, `DASHBOARD_HTTPS_PORT=5601`, перезапустите стек (`docker compose up -d`), чтобы Dashboard был на `https://127.0.0.1:5601` на хосте, а Nginx занял **443** и проксировал туда.
+
+Убедитесь, что прокси передаёт схему и корректно ходит к upstream по HTTPS (у стека самоподписанный сертификат):
 
 ```nginx
 location / {
-    proxy_pass https://127.0.0.1:5601;   # или порт из DASHBOARD_HTTPS_PORT на хосте
+    proxy_pass https://127.0.0.1:5601;   # должен совпадать с DASHBOARD_HTTPS_PORT в .env
     proxy_http_version 1.1;
+    proxy_ssl_server_name on;
+    proxy_ssl_verify off;   # для самоподписанного сертификата dashboard на localhost
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -162,6 +170,41 @@ location / {
 ```
 
 Не навешивайте **дополнительную HTTP Basic Auth** на этот же `server`, если не уверены, что она пробрасывается на все `POST /api/...` (частый источник 401 только с домена).
+
+Проверка с сервера: `curl -vk https://127.0.0.1:5601/` должен отвечать HTML Dashboard (подставьте свой порт из `DASHBOARD_HTTPS_PORT`). Если здесь обрыв — чините порт/TLS до Nginx.
+
+### 2a. Nginx Proxy Manager на другой машине (одна подсеть с Wazuh)
+
+Конфликта порта **443** с NPM **на этой же машине нет** — NPM слушает свой хост, Wazuh — свой. Трафик: браузер → `https://ваш-домен` (TLS на NPM) → по LAN на **`https://<LAN_IP_сервера_Wazuh>:<DASHBOARD_HTTPS_PORT>`**.
+
+1. **`center/.env`**  
+   - **`DASHBOARD_PUBLIC_BASE_URL=https://тот-же-домен-что-в-NPM`** (без `/` в конце).  
+   - Порт **`DASHBOARD_HTTPS_PORT`**: обычно **443**, если на сервере Wazuh ничто больше не занимает 443; иначе любой свободный (например **5601**) и тот же порт в NPM в поле **Forward Port**.
+
+2. Сгенерировать конфиги и пересоздать dashboard:
+
+   ```bash
+   cd center/
+   python3 scripts/render_secrets.py
+   docker compose up -d --force-recreate wazuh.dashboard
+   ```
+
+3. **Файрвол на сервере Wazuh**: разрешите вход **с IP машины NPM** на порт из `DASHBOARD_HTTPS_PORT` (TCP).
+
+4. **В NPM** (новый Proxy Host):  
+   - **Domain Names** — ваш домен; SSL — Let's Encrypt (как обычно).  
+   - **Forward Hostname / IP** — **внутренний IP** машины с Docker (не localhost NPM).  
+   - **Forward Port** — значение **`DASHBOARD_HTTPS_PORT`**.  
+   - Включите **HTTPS** к upstream (схема бэкенда — **https**), **WebSockets** (если есть переключатель).  
+   - Вкладка **Advanced**: вставьте фрагмент из **`center/config/nginx-proxy-manager/advanced-snippet.conf`** (заголовки, таймауты, **`proxy_ssl_verify off`** к самоподписанному сертификату Dashboard).
+
+5. Проверка с **машины NPM** до бэкенда:
+
+   ```bash
+   curl -vk "https://<LAN_IP_WAZUH>:<DASHBOARD_HTTPS_PORT>/"
+   ```
+
+   Должен прийти HTML (или редирект); при обрыве — сеть/файрвол/порт/TLS.
 
 ### 3. Cloudflare и аналоги
 
