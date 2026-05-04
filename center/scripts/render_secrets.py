@@ -76,24 +76,18 @@ def warn_about_static_bcrypt_hashes(admin_hash: str, kibana_hash: str) -> None:
         )
 
 
-def patch_opensearch_dashboards_public_base_url(path: Path, base_url: str) -> None:
-    """Добавляет или удаляет server.publicBaseUrl (нужно за reverse proxy с другим хостом, чем у контейнера)."""
+def remove_unsupported_public_base_url(path: Path, base_url: str) -> None:
+    """Удаляет server.publicBaseUrl: Wazuh Dashboard 4.14.x не принимает этот ключ и падает при старте."""
     raw = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
     lines = [ln for ln in raw.splitlines() if not ln.lstrip().startswith("server.publicBaseUrl:")]
-    out_lines: list[str] = []
     if base_url:
-        insert = f"server.publicBaseUrl: {yaml_double_quoted(base_url)}"
-        inserted = False
-        for ln in lines:
-            out_lines.append(ln)
-            if not inserted and ln.strip() == "server.port: 5601":
-                out_lines.append(insert)
-                inserted = True
-        if not inserted:
-            out_lines.append(insert)
-    else:
-        out_lines = lines
-    path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
+        print(
+            "ВНИМАНИЕ: DASHBOARD_PUBLIC_BASE_URL задан, но Wazuh Dashboard 4.14.x "
+            "не поддерживает server.publicBaseUrl. Строка не будет добавлена в "
+            "opensearch_dashboards.yml; внешний URL настраивается на стороне reverse proxy.",
+            file=sys.stderr,
+        )
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def write_wazuh_yml(
@@ -205,7 +199,7 @@ def main() -> None:
 
     osd_path = ROOT / "config/wazuh_dashboard/opensearch_dashboards.yml"
     public_base = env.get("DASHBOARD_PUBLIC_BASE_URL", "").strip().rstrip("/")
-    patch_opensearch_dashboards_public_base_url(osd_path, public_base)
+    remove_unsupported_public_base_url(osd_path, public_base)
 
     print(
         "OK: internal_users.yml, wazuh_manager.conf, wazuh.yml, opensearch_dashboards.yml обновлены из .env"

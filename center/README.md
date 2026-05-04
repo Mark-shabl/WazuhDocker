@@ -10,7 +10,7 @@
 
 1. В `center/.env`:
    - `DASHBOARD_HTTPS_PORT=443`, если на сервере Wazuh порт 443 свободен;
-   - `DASHBOARD_PUBLIC_BASE_URL=https://ваш-домен-в-NPM` без `/` в конце;
+   - не задавайте `DASHBOARD_PUBLIC_BASE_URL`: Wazuh Dashboard 4.14.x не поддерживает `server.publicBaseUrl` и падает при старте;
    - удалите старые `INDEXER_ADMIN_BCRYPT_HASH` и `DASHBOARD_KIBANASERVER_BCRYPT_HASH`, если переустанавливаете или меняете пароли.
 2. На сервере Wazuh:
 
@@ -162,16 +162,16 @@ docker exec center-wazuh.dashboard curl -sk -u "ВАШ_API_USER:ВАШ_API_PASSW
 
 ### 1. Публичный URL в конфиге Dashboard
 
-В **`center/.env`** задайте тот же адрес, что вводите в браузере (схема `https`, без слэша в конце), затем:
+Для `wazuh/wazuh-dashboard:4.14.x` **не добавляйте** `server.publicBaseUrl` в `opensearch_dashboards.yml`: этот ключ не проходит валидацию, Dashboard падает с ошибкой `ValidationError: child "server" fails because ["publicBaseUrl" is not allowed`.
+
+Если строка уже была добавлена старой версией инструкции, удалите или очистите `DASHBOARD_PUBLIC_BASE_URL` и пересоберите конфиг:
 
 ```bash
 python3 scripts/render_secrets.py
 docker compose up -d --force-recreate wazuh.dashboard
 ```
 
-В `opensearch_dashboards.yml` появится строка `server.publicBaseUrl: "https://ваш.домен"` — так OpenSearch Security корректно строит куки и редиректы за прокси.
-
-**Важно:** в `.env` это должен быть **тот же хост, что в адресной строке**. Если задать `https://домен`, а открывать `https://192.168.x.x`, плагин Wazuh часто ловит в браузере **AxiosError: Network Error** (XHR/сессии не совпадают с `publicBaseUrl`). Варианты: ходить только с домена; для доступа только по IP задайте `DASHBOARD_PUBLIC_BASE_URL=https://192.168.x.x` или **очистите** переменную, снова `render_secrets` и пересоздайте контейнер.
+Публичный домен в этом сценарии задаётся на стороне reverse proxy / NPM: внешний сертификат, `Host` и `X-Forwarded-Proto`.
 
 ### 2. Nginx (типовой минимум)
 
@@ -204,7 +204,7 @@ location / {
 Конфликта порта **443** с NPM **на этой же машине нет** — NPM слушает свой хост, Wazuh — свой. Трафик: браузер → `https://ваш-домен` (TLS на NPM) → по LAN на **`https://<LAN_IP_сервера_Wazuh>:<DASHBOARD_HTTPS_PORT>`**.
 
 1. **`center/.env`**  
-   - **`DASHBOARD_PUBLIC_BASE_URL=https://тот-же-домен-что-в-NPM`** (без `/` в конце).  
+   - Не задавайте **`DASHBOARD_PUBLIC_BASE_URL`** для Wazuh Dashboard 4.14.x.  
    - Порт **`DASHBOARD_HTTPS_PORT`**: обычно **443**, если на сервере Wazuh ничто больше не занимает 443; иначе любой свободный (например **5601**) и тот же порт в NPM в поле **Forward Port**.
 
 2. Сгенерировать конфиги и пересоздать dashboard:
