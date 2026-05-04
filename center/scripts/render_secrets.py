@@ -65,6 +65,17 @@ def yaml_double_quoted(s: str) -> str:
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def warn_about_static_bcrypt_hashes(admin_hash: str, kibana_hash: str) -> None:
+    if admin_hash or kibana_hash:
+        print(
+            "ВНИМАНИЕ: в .env заданы готовые bcrypt-хэши OpenSearch. "
+            "Они имеют приоритет над INDEXER_PASSWORD/DASHBOARD_PASSWORD для входа в Dashboard. "
+            "При переустановке или смене паролей удалите INDEXER_ADMIN_BCRYPT_HASH и "
+            "DASHBOARD_KIBANASERVER_BCRYPT_HASH, чтобы скрипт пересчитал хэши.",
+            file=sys.stderr,
+        )
+
+
 def patch_opensearch_dashboards_public_base_url(path: Path, base_url: str) -> None:
     """Добавляет или удаляет server.publicBaseUrl (нужно за reverse proxy с другим хостом, чем у контейнера)."""
     raw = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
@@ -116,6 +127,7 @@ def main() -> None:
 
     admin_hash = env.get("INDEXER_ADMIN_BCRYPT_HASH", "").strip()
     kibana_hash = env.get("DASHBOARD_KIBANASERVER_BCRYPT_HASH", "").strip()
+    warn_about_static_bcrypt_hashes(admin_hash, kibana_hash)
 
     if not admin_hash or not kibana_hash:
         idx_pw = env.get("INDEXER_PASSWORD", "").strip()

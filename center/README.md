@@ -4,6 +4,32 @@
 
 ## Порядок развёртывания
 
+### Быстрый сценарий: чистая установка через NPM на другой машине
+
+Если **Nginx Proxy Manager стоит на другой машине в той же подсети**, оставьте Dashboard опубликованным на сервере Wazuh и проксируйте к нему по LAN:
+
+1. В `center/.env`:
+   - `DASHBOARD_HTTPS_PORT=443`, если на сервере Wazuh порт 443 свободен;
+   - `DASHBOARD_PUBLIC_BASE_URL=https://ваш-домен-в-NPM` без `/` в конце;
+   - удалите старые `INDEXER_ADMIN_BCRYPT_HASH` и `DASHBOARD_KIBANASERVER_BCRYPT_HASH`, если переустанавливаете или меняете пароли.
+2. На сервере Wazuh:
+
+   ```bash
+   cd center/
+   sudo sysctl -w vm.max_map_count=262144
+   python3 scripts/render_secrets.py
+   docker compose -f generate-indexer-certs.yml run --rm generator
+   docker compose up -d
+   ```
+
+3. В NPM:
+   - **Forward Hostname / IP** — LAN IP сервера Wazuh;
+   - **Forward Port** — значение `DASHBOARD_HTTPS_PORT`;
+   - **Scheme** — `https`;
+   - включите WebSockets и вставьте `center/config/nginx-proxy-manager/advanced-snippet.conf` в **Advanced**.
+
+Перед настройкой домена проверьте с машины NPM: `curl -vk "https://<LAN_IP_WAZUH>:<DASHBOARD_HTTPS_PORT>/"`.
+
 ### 1. Память для Indexer (Linux / WSL)
 
 ```bash
