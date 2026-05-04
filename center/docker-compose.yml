@@ -1,9 +1,9 @@
 # Wazuh App Copyright (C) 2017, Wazuh Inc. (License GPLv2)
-# Секреты и логины — в .env. Перед up: python scripts/render_secrets.py
-# Затем: docker compose -f generate-indexer-certs.yml run --rm generator
+# Стандартный single-node Wazuh Docker. Перед первым up:
+# docker compose -f generate-indexer-certs.yml run --rm generator
 services:
   wazuh.manager:
-    image: wazuh/wazuh-manager:${WAZUH_IMAGE_VERSION:-4.14.4}
+    image: wazuh/wazuh-manager:${WAZUH_IMAGE_VERSION:-4.14.5}
     hostname: wazuh.manager
     container_name: center-wazuh.manager
     restart: always
@@ -43,7 +43,7 @@ services:
       - ./config/wazuh_cluster/wazuh_manager.conf:/wazuh-config-mount/etc/ossec.conf
 
   wazuh.indexer:
-    image: wazuh/wazuh-indexer:${WAZUH_IMAGE_VERSION:-4.14.4}
+    image: wazuh/wazuh-indexer:${WAZUH_IMAGE_VERSION:-4.14.5}
     hostname: wazuh.indexer
     container_name: center-wazuh.indexer
     restart: always
@@ -64,7 +64,7 @@ services:
       - ./config/wazuh_indexer/internal_users.yml:/usr/share/wazuh-indexer/config/opensearch-security/internal_users.yml
 
   wazuh.dashboard:
-    image: wazuh/wazuh-dashboard:${WAZUH_IMAGE_VERSION:-4.14.4}
+    image: wazuh/wazuh-dashboard:${WAZUH_IMAGE_VERSION:-4.14.5}
     hostname: wazuh.dashboard
     container_name: center-wazuh.dashboard
     restart: always

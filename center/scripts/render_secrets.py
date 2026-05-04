@@ -32,7 +32,7 @@ def load_env(path: Path) -> dict[str, str]:
     return env
 
 
-def docker_bcrypt_hash(plaintext: str, image: str) -> str:
+def docker_bcrypt_hash(plaintext: str, image: str, timeout_seconds: int) -> str:
     proc = subprocess.run(
         [
             "docker",
@@ -47,7 +47,7 @@ def docker_bcrypt_hash(plaintext: str, image: str) -> str:
         ],
         capture_output=True,
         text=True,
-        timeout=180,
+        timeout=timeout_seconds,
     )
     if proc.returncode != 0:
         raise RuntimeError(
@@ -59,6 +59,19 @@ def docker_bcrypt_hash(plaintext: str, image: str) -> str:
     if not lines:
         raise RuntimeError("hash.sh вернул пустой вывод.")
     return lines[-1].strip().strip('"').strip("'")
+
+
+def bcrypt_timeout_seconds(env: dict[str, str]) -> int:
+    raw = env.get("BCRYPT_HASH_TIMEOUT_SECONDS", "600").strip()
+    try:
+        timeout = int(raw)
+    except ValueError:
+        print("BCRYPT_HASH_TIMEOUT_SECONDS должен быть числом секунд.", file=sys.stderr)
+        sys.exit(1)
+    if timeout < 60:
+        print("BCRYPT_HASH_TIMEOUT_SECONDS слишком мал; задайте минимум 60.", file=sys.stderr)
+        sys.exit(1)
+    return timeout
 
 
 def yaml_double_quoted(s: str) -> str:
@@ -74,20 +87,6 @@ def warn_about_static_bcrypt_hashes(admin_hash: str, kibana_hash: str) -> None:
             "DASHBOARD_KIBANASERVER_BCRYPT_HASH, чтобы скрипт пересчитал хэши.",
             file=sys.stderr,
         )
-
-
-def remove_unsupported_public_base_url(path: Path, base_url: str) -> None:
-    """Удаляет server.publicBaseUrl: Wazuh Dashboard 4.14.x не принимает этот ключ и падает при старте."""
-    raw = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
-    lines = [ln for ln in raw.splitlines() if not ln.lstrip().startswith("server.publicBaseUrl:")]
-    if base_url:
-        print(
-            "ВНИМАНИЕ: DASHBOARD_PUBLIC_BASE_URL задан, но Wazuh Dashboard 4.14.x "
-            "не поддерживает server.publicBaseUrl. Строка не будет добавлена в "
-            "opensearch_dashboards.yml; внешний URL настраивается на стороне reverse proxy.",
-            file=sys.stderr,
-        )
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def write_wazuh_yml(
@@ -116,8 +115,9 @@ def main() -> None:
     env_path = ROOT / ".env"
     env = load_env(env_path)
 
-    ver = env.get("WAZUH_IMAGE_VERSION", "4.14.4").strip()
+    ver = env.get("WAZUH_IMAGE_VERSION", "4.14.5").strip()
     image = f"wazuh/wazuh-indexer:{ver}"
+    hash_timeout = bcrypt_timeout_seconds(env)
 
     admin_hash = env.get("INDEXER_ADMIN_BCRYPT_HASH", "").strip()
     kibana_hash = env.get("DASHBOARD_KIBANASERVER_BCRYPT_HASH", "").strip()
@@ -135,9 +135,9 @@ def main() -> None:
             sys.exit(1)
         try:
             if not admin_hash:
-                admin_hash = docker_bcrypt_hash(idx_pw, image)
+                admin_hash = docker_bcrypt_hash(idx_pw, image, hash_timeout)
             if not kibana_hash:
-                kibana_hash = docker_bcrypt_hash(dash_pw, image)
+                kibana_hash = docker_bcrypt_hash(dash_pw, image, hash_timeout)
         except FileNotFoundError:
             print(
                 "Команда docker не найдена. Установите Docker или пропишите в .env:\n"
@@ -150,6 +150,15 @@ def main() -> None:
             sys.exit(1)
         except RuntimeError as e:
             print(str(e), file=sys.stderr)
+            sys.exit(1)
+        except subprocess.TimeoutExpired:
+            print(
+                f"docker hash.sh не завершился за {hash_timeout} секунд. "
+                "На медленном сервере увеличьте BCRYPT_HASH_TIMEOUT_SECONDS в .env "
+                "или укажите готовые INDEXER_ADMIN_BCRYPT_HASH и "
+                "DASHBOARD_KIBANASERVER_BCRYPT_HASH.",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
     cluster_key = env.get("WAZUH_CLUSTER_KEY", "").strip()
@@ -197,12 +206,8 @@ def main() -> None:
         run_as,
     )
 
-    osd_path = ROOT / "config/wazuh_dashboard/opensearch_dashboards.yml"
-    public_base = env.get("DASHBOARD_PUBLIC_BASE_URL", "").strip().rstrip("/")
-    remove_unsupported_public_base_url(osd_path, public_base)
-
     print(
-        "OK: internal_users.yml, wazuh_manager.conf, wazuh.yml, opensearch_dashboards.yml обновлены из .env"
+        "OK: internal_users.yml, wazuh_manager.conf, wazuh.yml обновлены из .env"
     )
 
 

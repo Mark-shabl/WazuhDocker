@@ -1,10 +1,10 @@
 # Wazuh в Docker: центр и агенты
 
-Минимальный репозиторий под **стабильный Wazuh 4.14.x** (образы `wazuh/wazuh-*`).
+Минимальный репозиторий под **стабильный Wazuh 4.14.5** (образы `wazuh/wazuh-*`).
 
 | Каталог | Назначение |
 |---------|------------|
-| **`center/`** | Центральный узел: indexer, manager, dashboard. Секреты в `.env`, скрипт `scripts/render_secrets.py`, генерация TLS `generate-indexer-certs.yml`. |
+| **`center/`** | Центральный узел: indexer, manager, dashboard. Стандартный single-node запуск, генерация TLS через `generate-indexer-certs.yml`. |
 | **`remote/`** | Агент на Linux (или другой хост с Docker): подключение к manager по `WAZUH_MANAGER_SERVER`. |
 
 Быстрый старт — в **`center/README.md`** и **`remote/README.md`**.
