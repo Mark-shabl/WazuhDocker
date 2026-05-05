@@ -8,6 +8,9 @@ services:
       - .env
     environment:
       - WAZUH_MANAGER_SERVER=${WAZUH_MANAGER_SERVER}
+      - WAZUH_REGISTRATION_SERVER=${WAZUH_REGISTRATION_SERVER:-${WAZUH_MANAGER_SERVER}}
+      - WAZUH_AGENT_GROUP=${WAZUH_AGENT_GROUP:-default}
+      - WAZUH_AGENT_NAME=${WAZUH_AGENT_NAME:-wazuh-docker-agent}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

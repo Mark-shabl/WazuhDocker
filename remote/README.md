@@ -23,6 +23,9 @@ cp .env.example .env
 |------------|----------|
 | `WAZUH_STACK_VERSION` | Тот же тег, что образы на центре (например `4.14.5`). |
 | `WAZUH_MANAGER_SERVER` | **Публичный или VLAN IP/DNS** сервера с `center/`, **не** `127.0.0.1`. |
+| `WAZUH_REGISTRATION_SERVER` | Обычно тот же IP/DNS, что `WAZUH_MANAGER_SERVER`; используется для enrollment на TCP 1515. |
+| `WAZUH_AGENT_GROUP` | Группа агента. `default` существует всегда. |
+| `WAZUH_AGENT_NAME` | Уникальное имя агента в Dashboard. |
 
 В `docker-compose.yml` уже есть `extra_hosts: host.docker.internal:host-gateway` — на Linux это даёт **host.docker.internal** как шлюз на хост; для связи с **удалённым** менеджером оно не обязательно, но и не мешает.
 
@@ -30,6 +33,15 @@ cp .env.example .env
 docker compose up -d
 docker compose logs -f   # при необходимости
 ```
+
+Проверка внутри контейнера:
+
+```bash
+docker exec wazuh-remote-agent grep -A20 '<client>' /var/ossec/etc/ossec.conf
+docker logs --tail=100 wazuh-remote-agent
+```
+
+В `ossec.conf` должны быть IP manager, enrollment-порт `1515` и `<groups>default</groups>` (или ваша группа).
 
 Остановка: `docker compose down`.
 
