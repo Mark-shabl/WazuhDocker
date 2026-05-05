@@ -22,8 +22,8 @@ cp .env.example .env
 | Переменная | Значение |
 |------------|----------|
 | `WAZUH_STACK_VERSION` | Тот же тег, что образы на центре (например `4.14.5`). |
-| `WAZUH_MANAGER_SERVER` | **Публичный или VLAN IP/DNS** сервера с `center/`, **не** `127.0.0.1`. |
-| `WAZUH_REGISTRATION_SERVER` | Обычно тот же IP/DNS, что `WAZUH_MANAGER_SERVER`; используется для enrollment на TCP 1515. |
+| `WAZUH_MANAGER_SERVER` | `wazuh.manager`, если agent и center на одном Docker-хосте; LAN/VLAN IP или DNS сервера `center`, если агент на другой машине. Не используйте `127.0.0.1`. |
+| `WAZUH_REGISTRATION_SERVER` | Обычно то же значение, что `WAZUH_MANAGER_SERVER`; используется для enrollment на TCP 1515. |
 | `WAZUH_AGENT_GROUP` | Группа агента. `default` существует всегда. |
 | `WAZUH_AGENT_NAME` | Уникальное имя агента в Dashboard. |
 
@@ -41,7 +41,9 @@ docker exec wazuh-remote-agent grep -A20 '<client>' /var/ossec/etc/ossec.conf
 docker logs --tail=100 wazuh-remote-agent
 ```
 
-В `ossec.conf` должны быть IP manager, enrollment-порт `1515` и `<groups>default</groups>` (или ваша группа).
+В `ossec.conf` должны быть адрес manager, enrollment-порт `1515` и `<groups>default</groups>` (или ваша группа).
+
+По умолчанию `remote/docker-compose.yml` подключает агент к внешней сети `center_default`, которую создаёт стек `center/`, и агент ходит к manager напрямую по Docker DNS имени `wazuh.manager`. Если запускаете агент на другой машине, замените `WAZUH_MANAGER_SERVER` и `WAZUH_REGISTRATION_SERVER` на LAN/VLAN IP или DNS сервера `center` и уберите/адаптируйте внешний network-блок в `docker-compose.yml`.
 
 Остановка: `docker compose down`.
 
@@ -51,7 +53,7 @@ docker logs --tail=100 wazuh-remote-agent
 
 Для агента на той же системе, где крутится `center/`, в `.env` удобно задать:
 
-`WAZUH_MANAGER_SERVER=host.docker.internal`
+`WAZUH_MANAGER_SERVER=wazuh.manager`
 
 ---
 
