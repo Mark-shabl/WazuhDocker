@@ -45,6 +45,8 @@ docker logs --tail=100 wazuh-remote-agent
 
 По умолчанию `remote/docker-compose.yml` подключает агент к внешней сети `center_default`, которую создаёт стек `center/`, и агент ходит к manager напрямую по Docker DNS имени `wazuh.manager`. Если запускаете агент на другой машине, замените `WAZUH_MANAGER_SERVER` и `WAZUH_REGISTRATION_SERVER` на LAN/VLAN IP или DNS сервера `center` и уберите/адаптируйте внешний network-блок в `docker-compose.yml`.
 
+Ключ агента хранится в named volume `wazuh-agent-etc`, чтобы после `docker compose down/up` агент не терял регистрацию и не получал `Duplicate agent name`.
+
 Остановка: `docker compose down`.
 
 ---
