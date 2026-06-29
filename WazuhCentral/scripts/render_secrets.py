@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Генерирует конфиги с секретами из center/.env (без хранения паролей в YAML в git).
+Генерирует конфиги с секретами из WazuhCentral/.env (без хранения паролей в YAML в git).
 Нужен Docker для расчёта bcrypt (hash.sh в образе wazuh-indexer) либо задайте хеши в .env вручную.
-Запуск из каталога center/:  python scripts/render_secrets.py
+Запуск из каталога WazuhCentral/:  python scripts/render_secrets.py
 """
 from __future__ import annotations
 

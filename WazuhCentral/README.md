@@ -1,4 +1,4 @@
-# Центральный сервер Wazuh (`center/`)
+# Центральный сервер Wazuh (`WazuhCentral/`)
 
 Стандартный single-node стек **Wazuh 4.14.5**: `wazuh.manager`, `wazuh.indexer`, `wazuh.dashboard`.
 
@@ -6,7 +6,7 @@
 
 ## Быстрый Старт
 
-Из каталога `center/`:
+Из каталога `WazuhCentral/`:
 
 ```bash
 cp .env.example .env
@@ -153,6 +153,13 @@ curl -vk https://<LAN_IP_сервера_Wazuh>:443/
 
 Не включайте дополнительную HTTP Basic Auth поверх Wazuh Dashboard, пока не убедитесь, что все `POST /api/...` проходят без 401.
 
-## Связка С `remote/`
+## Связка С `WazuhRemote/`
 
-В `remote/.env` укажите тот же `WAZUH_STACK_VERSION`, что и `WAZUH_IMAGE_VERSION` в `center/.env`, и IP/адрес manager в `WAZUH_MANAGER_SERVER`.
+Для агентов используется DNS `wazuh-manager.mark-sandbox.ru`. Он должен указывать на сервер `WazuhCentral`, а TCP `1514` и `1515` должны быть доступны с машин агентов.
+
+В `WazuhRemote/.env` укажите тот же `WAZUH_STACK_VERSION`, что и `WAZUH_IMAGE_VERSION` в `WazuhCentral/.env`, и задайте:
+
+```env
+WAZUH_MANAGER_SERVER=wazuh-manager.mark-sandbox.ru
+WAZUH_REGISTRATION_SERVER=wazuh-manager.mark-sandbox.ru
+```
