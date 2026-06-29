@@ -1,7 +1,13 @@
 # Wazuh App Copyright (C) 2017, Wazuh Inc. (License GPLv2)
 # Стандартный single-node Wazuh Docker. Перед первым up:
 # docker compose -f generate-indexer-certs.yml run --rm generator
-name: center
+name: wazuh-central
+
+x-logging: &default-logging
+  driver: local
+  options:
+    max-size: ${DOCKER_LOG_MAX_SIZE:-50m}
+    max-file: ${DOCKER_LOG_MAX_FILE:-7}
 
 services:
   wazuh.manager:
@@ -9,6 +15,7 @@ services:
     hostname: wazuh.manager
     container_name: center-wazuh.manager
     restart: always
+    logging: *default-logging
     env_file:
       - .env
     # Без кастомных ulimits: на части хостов (rootless, LXC) повышение nofile/memlock даёт «rlimit type 7/8».
@@ -49,6 +56,7 @@ services:
     hostname: wazuh.indexer
     container_name: center-wazuh.indexer
     restart: always
+    logging: *default-logging
     env_file:
       - .env
     ports:
@@ -70,6 +78,7 @@ services:
     hostname: wazuh.dashboard
     container_name: center-wazuh.dashboard
     restart: always
+    logging: *default-logging
     env_file:
       - .env
     ports:

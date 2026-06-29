@@ -1,11 +1,18 @@
 # Wazuh App Copyright (C) 2017, Wazuh Inc. (License GPLv2)
-name: remote
+name: wazuh-remote
+
+x-logging: &default-logging
+  driver: local
+  options:
+    max-size: ${DOCKER_LOG_MAX_SIZE:-50m}
+    max-file: ${DOCKER_LOG_MAX_FILE:-7}
 
 services:
   wazuh.agent:
     image: wazuh/wazuh-agent:${WAZUH_STACK_VERSION:-4.14.5}
     container_name: wazuh-remote-agent
     restart: always
+    logging: *default-logging
     env_file:
       - .env
     environment:

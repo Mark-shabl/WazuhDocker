@@ -76,6 +76,21 @@ docker logs --tail=100 wazuh-remote-agent
 docker exec center-wazuh.manager /var/ossec/bin/agent_control -l
 ```
 
+## Ограничение Docker-Логов
+
+В `docker-compose.yml` включён Docker `local` logging driver с ротацией stdout/stderr логов контейнера. По умолчанию хранится до `7` файлов по `50 MB`:
+
+```env
+DOCKER_LOG_MAX_SIZE=50m
+DOCKER_LOG_MAX_FILE=7
+```
+
+Если нужно применить изменённые лимиты к уже созданному контейнеру:
+
+```bash
+docker compose up -d --force-recreate
+```
+
 ## Повторный Запуск И Ключи
 
 Ключ агента хранится в named volume `wazuh-agent-etc`, чтобы после `docker compose down/up` агент не терял регистрацию и не получал `Duplicate agent name`.
@@ -84,7 +99,7 @@ docker exec center-wazuh.manager /var/ossec/bin/agent_control -l
 
 ```bash
 docker compose down
-docker volume rm remote_wazuh-agent-etc 2>/dev/null || true
+docker volume rm wazuh-remote_wazuh-agent-etc 2>/dev/null || true
 ```
 
 Затем удалите старого агента на manager через Dashboard или `manage_agents`, после чего снова запустите:
